@@ -8,6 +8,7 @@ import kafka.server.KafkaConfig
 import org.apache.avro.Schema
 import org.apache.avro.generic.GenericData
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
+import org.apache.kafka.common.serialization.{LongDeserializer, Serdes, StringDeserializer}
 import org.scalatest.{FlatSpec, Matchers}
 import org.ust.transformer.infra.KafkaInfra
 
@@ -28,8 +29,8 @@ class EventAggregatorTest extends FlatSpec with KafkaInfra with Matchers {
 
     kafkaConfig.put(keySerializerKey, classOf[KafkaAvroSerializer])
     kafkaConfig.put(valueSerializerKey, classOf[KafkaAvroSerializer])
-    kafkaConfig.put(keyDeserializerKey, classOf[KafkaAvroDeserializer])
-    kafkaConfig.put(valueDeserializerKey, classOf[KafkaAvroDeserializer])
+    kafkaConfig.put(keyDeserializerKey, classOf[StringDeserializer])
+    kafkaConfig.put(valueDeserializerKey, classOf[LongDeserializer])
     kafkaConfig.put(groupIdKey, groupIdValue)
     kafkaConfig.put(KafkaConfig.BrokerIdProp, defaultBrokerIdProp)
     kafkaConfig.put(KafkaConfig.HostNameProp, kafkaHost)
@@ -42,16 +43,16 @@ class EventAggregatorTest extends FlatSpec with KafkaInfra with Matchers {
     withKafkaServer(Option(kafkaConfig), false) { kafkaServer =>
       val properties = fromKafkaConfigToProps(kafkaServer.config)
       properties.put("application.id", "quote-policy-events-transformer")
-      val inputTopic = "songs2"
-      val outputTopic = "artists-count-aggregation40"
+      val inputTopic = "unit-test-input-topic"
+      val outputTopic = "unit-test-output-topic"
 
 
-      ThreadRunner.runThread(80000) {
+      ThreadRunner.runThread(40000) {
         EventAggregator.aggregateByArtist(inputTopic, outputTopic, properties)
       }
 
 
-      ThreadRunner.runThread(30000) {
+      ThreadRunner.runThread(10000) {
         withKafkaProducer(properties) { kafkaProducer: KafkaProducer[Any, Any] =>
           withKafkaConsumer(properties, List(outputTopic)) { kafkaConsumer =>
             //This should be in an external avsc file!!!
@@ -115,11 +116,9 @@ class EventAggregatorTest extends FlatSpec with KafkaInfra with Matchers {
             while (true) {
               val records = kafkaConsumer.poll(10).records(outputTopic)
               if (records.size > 0) {
-                println("CONSUMEEEEE!!!!")
-                val matchingRecord = records.toList(0)
-                for (record <- records.toList) {
-                  println(record.key().toString+"-"+record.value().toString)
-
+                  /*TODO: Comprobamos simplemente que llegan registros al topic de salida, lo suyo sería comprobar que
+                          la agregación se hace bien pero para ello habría que "limpiar" los topics de entrada y salida
+                          antes de iniciar el test*/
                   result = true
                 }
               }

@@ -1,20 +1,14 @@
 package org.ust.transformer
 
+import java.lang.{Long => JLong}
 import java.util.Properties
 
 import io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig
-import org.apache.avro.Schema
 import org.apache.avro.generic.GenericRecord
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization._
 import org.apache.kafka.streams.kstream._
 import org.apache.kafka.streams.{KafkaStreams, KeyValue, StreamsConfig}
-import java.lang.{Long => JLong}
-
-import org.apache.jute.compiler
-import org.apache.kafka.streams.state.Stores
-
-import scala.collection.mutable
 
 object EventAggregator {
 
@@ -43,10 +37,6 @@ object EventAggregator {
     // read the source stream
     val songs: KStream[String, GenericRecord] = builder.stream(inputTopic)
 
-    // this should be in a separate avsc file
-    /*val jsonSchemaForSongs = """{"namespace": "org.ust.aggregator.schema", "type": "record", "name": "aggregator", "fields": [{"name": "song", "type": "string"}, {"name": "artist","type": "string"}, {"name": "album","type": "string"}, {"name": "genre","type": "string"}, {"name": "playduration","type": "int"}, {"name": "rating","type": "int"}, {"name": "user","type": "string"}, {"name": "usertype","type": "string"}, {"name": "city","type": "string"}, {"name": "location","type": "string"}, {"name": "starttime","type": "string"}]}"""
-    val schemaForSongs = new Schema.Parser().parse(jsonSchemaForSongs)*/
-
     val keyArtist = new KeyValueMapper[String, GenericRecord, KeyValue[String, JLong]] {
       override def apply(key: String, value: GenericRecord): KeyValue[String, JLong] = {
         new KeyValue[String, JLong](value.get("artist").toString, 1L)
@@ -58,13 +48,10 @@ object EventAggregator {
     val stringSerde: Serde[String] = Serdes.String()
     val longSerde: Serde[JLong] = Serdes.Long()
 
-
-    val temp = keyAndArtist.through(stringSerde, longSerde, "avro-temp-4")
-    temp.groupByKey(stringSerde, longSerde).count("artist-aggregation-4").toStream.to(stringSerde, longSerde, outputTopic)
-
+    keyAndArtist.groupByKey(stringSerde, longSerde).count("artist-aggregation-count").toStream.to(stringSerde, longSerde, outputTopic)
 
     val streams =  new KafkaStreams(builder, properties)
-    println("Stream application started!")
+    println("Stream application started!!")
     streams.start
     streams
   }
