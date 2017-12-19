@@ -30,6 +30,7 @@ trait KafkaInfra {
   val autoCreateTopicsKey = "auto.create.topics.enable"
   val zookeeperPortConfig = "zookeeper.port"
   val zookeeperHostConfig = "zookeeper.host"
+  val cacheMaxBytesBufferingKey = "cache.max.bytes.buffering"
 
   def mutuaConfigKafkaServer(props: Option[Properties], zkConnectString : String): Properties = {
 
@@ -40,6 +41,7 @@ trait KafkaInfra {
           properties.put(bootstrapServerKey, s"""$kafkaHost:$kafkaPort""")
           properties.put(KafkaConfig.HostNameProp, kafkaHost)
           properties.put(KafkaConfig.PortProp, kafkaPort)
+          properties.put(cacheMaxBytesBufferingKey, "0")
         }
         properties
       }
@@ -57,6 +59,7 @@ trait KafkaInfra {
         kafkaConfig.put(KafkaConfig.PortProp, kafkaPort)
         kafkaConfig.put(KafkaConfig.NumPartitionsProp, defaultPartitions)
         kafkaConfig.put(KafkaConfig.AutoCreateTopicsEnableProp, defaultAutoCreateTopics)
+        kafkaConfig.put(cacheMaxBytesBufferingKey, "0")
         kafkaConfig
       }
     }

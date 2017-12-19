@@ -36,21 +36,22 @@ class EventAggregatorTest extends FlatSpec with KafkaInfra with Matchers {
     kafkaConfig.put(KafkaConfig.PortProp, kafkaPort)
     kafkaConfig.put(KafkaConfig.NumPartitionsProp, defaultPartitions)
     kafkaConfig.put(KafkaConfig.AutoCreateTopicsEnableProp, defaultAutoCreateTopics)
+    kafkaConfig.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, "http://localhost:8081")
     kafkaConfig.put(ConsumerConfig.AutoOffsetReset, "earliest")
 
     withKafkaServer(Option(kafkaConfig), false) { kafkaServer =>
       val properties = fromKafkaConfigToProps(kafkaServer.config)
       properties.put("application.id", "quote-policy-events-transformer")
-      val inputTopic = "songs"
-      val outputTopic = "artists-count"
+      val inputTopic = "songs2"
+      val outputTopic = "artists-count-aggregation40"
 
 
-      ThreadRunner.runThread(20000) {
+      ThreadRunner.runThread(80000) {
         EventAggregator.aggregateByArtist(inputTopic, outputTopic, properties)
       }
 
 
-      ThreadRunner.runThread(10000) {
+      ThreadRunner.runThread(30000) {
         withKafkaProducer(properties) { kafkaProducer: KafkaProducer[Any, Any] =>
           withKafkaConsumer(properties, List(outputTopic)) { kafkaConsumer =>
             //This should be in an external avsc file!!!
@@ -86,17 +87,17 @@ class EventAggregatorTest extends FlatSpec with KafkaInfra with Matchers {
             genericSongMetallica2.put("location", "Madrid")
             genericSongMetallica2.put("starttime", "20:32:07")
 
-            genericSongMetallica2.put("song", "Black")
-            genericSongMetallica2.put("artist", "Pearl Jam")
-            genericSongMetallica2.put("album", "Ten")
-            genericSongMetallica2.put("genre", "Rock")
-            genericSongMetallica2.put("playduration", 115)
-            genericSongMetallica2.put("rating", 4)
-            genericSongMetallica2.put("user", "Alberto1234")
-            genericSongMetallica2.put("usertype", "free")
-            genericSongMetallica2.put("city", "Madrid")
-            genericSongMetallica2.put("location", "Madrid")
-            genericSongMetallica2.put("starttime", "20:34:07")
+            genericSongPearlJam.put("song", "Black")
+            genericSongPearlJam.put("artist", "Pearl Jam")
+            genericSongPearlJam.put("album", "Ten")
+            genericSongPearlJam.put("genre", "Rock")
+            genericSongPearlJam.put("playduration", 115)
+            genericSongPearlJam.put("rating", 4)
+            genericSongPearlJam.put("user", "Alberto1234")
+            genericSongPearlJam.put("usertype", "free")
+            genericSongPearlJam.put("city", "Madrid")
+            genericSongPearlJam.put("location", "Madrid")
+            genericSongPearlJam.put("starttime", "20:34:07")
 
             val songId1 = "12345678X"
             val songId2 = "44545423M"
@@ -113,10 +114,14 @@ class EventAggregatorTest extends FlatSpec with KafkaInfra with Matchers {
 
             while (true) {
               val records = kafkaConsumer.poll(10).records(outputTopic)
-
               if (records.size > 0) {
+                println("CONSUMEEEEE!!!!")
                 val matchingRecord = records.toList(0)
-                result = matchingRecord.key.equals("12345678X")
+                for (record <- records.toList) {
+                  println(record.key().toString+"-"+record.value().toString)
+
+                  result = true
+                }
               }
             }
           }
