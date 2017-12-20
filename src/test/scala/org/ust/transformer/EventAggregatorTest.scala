@@ -128,7 +128,6 @@ class EventAggregatorTest extends FlatSpec with KafkaInfra with Matchers {
       }
 
       result shouldBe(true)
-    }
   }
 }
 
